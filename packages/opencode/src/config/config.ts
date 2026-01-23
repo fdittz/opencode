@@ -274,7 +274,7 @@ export namespace Config {
     // This allows local plugins and custom tools to use external packages
     await BunProc.run(
       [
-        "install",
+        "install" + (Flag.OPENCODE_BUN_BACKEND ? " --backend=" + Flag.OPENCODE_BUN_BACKEND : ""),
         // TODO: get rid of this case (see: https://github.com/oven-sh/bun/issues/19936)
         ...(proxied() ? ["--no-cache"] : []),
       ],
