@@ -5,13 +5,13 @@ import path from "path"
 import { Filesystem } from "../util/filesystem"
 import { NamedError } from "@opencode-ai/util/error"
 import { readableStreamToText } from "bun"
-import { createRequire } from "module"
 import { Lock } from "../util/lock"
 import { Flag } from "../flag/flag"
+import { PackageRegistry } from "./registry"
+import { proxied } from "@/util/proxied"
 
 export namespace BunProc {
   const log = Log.create({ service: "bun" })
-  const req = createRequire(import.meta.url)
 
   export async function run(cmd: string[], options?: Bun.SpawnOptions.OptionsObject<any, any, any>) {
     log.info("running", {
@@ -76,14 +76,17 @@ export namespace BunProc {
     const dependencies = parsed.dependencies ?? {}
     if (!parsed.dependencies) parsed.dependencies = dependencies
     const modExists = await Filesystem.exists(mod)
-    if (dependencies[pkg] === version && modExists) return mod
+    const cachedVersion = dependencies[pkg]
 
-    const proxied = !!(
-      process.env.HTTP_PROXY ||
-      process.env.HTTPS_PROXY ||
-      process.env.http_proxy ||
-      process.env.https_proxy
-    )
+    if (!modExists || !cachedVersion) {
+      // continue to install
+    } else if (version !== "latest" && cachedVersion === version) {
+      return mod
+    } else if (version === "latest") {
+      const isOutdated = await PackageRegistry.isOutdated(pkg, cachedVersion, Global.Path.cache)
+      if (!isOutdated) return mod
+      log.info("Cached version is outdated, proceeding with install", { pkg, cachedVersion })
+    }
 
     // Build command arguments
     const args = [
@@ -92,7 +95,7 @@ export namespace BunProc {
       ...(!Flag.OPENCODE_BUN_NO_FORCE ? ["--force"] : []),
       "--exact",
       // TODO: get rid of this case (see: https://github.com/oven-sh/bun/issues/19936)
-      ...(proxied ? ["--no-cache"] : []),
+      ...(proxied() ? ["--no-cache"] : []),
       // Support custom backend (e.g., --backend=copyfile for NFS)
       ...(Flag.OPENCODE_BUN_BACKEND ? ["--backend=" + Flag.OPENCODE_BUN_BACKEND] : []),
       "--cwd",
