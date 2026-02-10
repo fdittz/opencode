@@ -112,6 +112,8 @@ jobs:
         run: |
           cd packages/opencode
           bun run build
+        env:
+          OPENCODE_VERSION: ${{ steps.version.outputs.version }}
           
       - name: Restore original package.json
         if: always()
@@ -139,7 +141,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.release_name }}
           draft: false
-          prerelease: true
+          prerelease: false
           files: |
             release-binaries/*
             install-opencode.sh
@@ -187,6 +189,8 @@ jobs:
         run: |
           cd packages/opencode
           bun run build --single
+        env:
+          OPENCODE_VERSION: ${{ needs.build.outputs.tag }}
 
       - name: Copy binary and make executable
         run: |
@@ -243,6 +247,8 @@ jobs:
         run: |
           cd packages/opencode
           bun run build --single
+        env:
+          OPENCODE_VERSION: ${{ needs.build.outputs.tag }}
 
       - name: Copy binary and make executable
         run: |
@@ -295,6 +301,8 @@ jobs:
         run: |
           cd packages/opencode
           bun run build --single
+        env:
+          OPENCODE_VERSION: ${{ needs.build.outputs.tag }}
 
       - name: Copy binary
         shell: pwsh
