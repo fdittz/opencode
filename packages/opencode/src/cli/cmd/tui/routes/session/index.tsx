@@ -124,11 +124,11 @@ export function Session() {
   })
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
   const permissions = createMemo(() => {
-    if (session()?.parentID) return []
+    //if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.permission[x.id] ?? [])
   })
   const questions = createMemo(() => {
-    if (session()?.parentID) return []
+    //if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.question[x.id] ?? [])
   })
 
@@ -154,7 +154,7 @@ export function Session() {
 
   const wide = createMemo(() => dimensions().width > 120)
   const sidebarVisible = createMemo(() => {
-    if (session()?.parentID) return false
+    //if (session()?.parentID) return false
     if (sidebarOpen()) return true
     if (sidebar() === "auto" && wide()) return true
     return false
@@ -237,7 +237,7 @@ export function Session() {
   })
 
   useKeyboard((evt) => {
-    if (!session()?.parentID) return
+    //if (!session()?.parentID) return
     if (keybind.match("app_exit", evt)) {
       exit()
     }
@@ -1083,7 +1083,7 @@ export function Session() {
                 <QuestionPrompt request={questions()[0]} />
               </Show>
               <Prompt
-                visible={!session()?.parentID && permissions().length === 0 && questions().length === 0}
+                visible={/*!session()?.parentID && */permissions().length === 0 && questions().length === 0}
                 ref={(r) => {
                   prompt = r
                   promptRef.set(r)
