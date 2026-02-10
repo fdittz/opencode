@@ -117,7 +117,19 @@ export function Session() {
   const promptRef = usePromptRef()
   const session = createMemo(() => sync.session.get(route.sessionID))
   const children = createMemo(() => {
-    const parentID = session()?.parentID ?? session()?.id
+    const currentSession = session()
+    if (!currentSession) return []
+    
+    // Get children of current session
+    const directChildren = sync.data.session.filter((x) => x.parentID === currentSession.id)
+    
+    // If current session has children, return them plus current session
+    if (directChildren.length > 0) {
+      return [currentSession, ...directChildren].toSorted((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    }
+    
+    // If no children, return siblings (including current session)
+    const parentID = currentSession.parentID ?? currentSession.id
     return sync.data.session
       .filter((x) => x.parentID === parentID || x.id === parentID)
       .toSorted((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
