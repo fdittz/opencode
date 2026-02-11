@@ -136,6 +136,13 @@ jobs:
           done
           ls -la release-binaries/
 
+      - name: Upload CLI artifact for desktop builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-cli
+          path: packages/opencode/dist
+          retention-days: 1
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -308,7 +315,19 @@ jobs:
       - name: Copy binary
         shell: pwsh
         run: |
-          $binary = Get-ChildItem -Path packages/opencode/dist -Filter opencode.exe -File | Select-Object -First 1
+          Write-Host "Listing contents of packages/opencode/dist:"
+          Get-ChildItem -Path packages/opencode/dist -Recurse | Format-Table Name, FullName
+          
+          $binary = Get-ChildItem -Path packages/opencode/dist -Filter opencode.exe -File -Recurse | Select-Object -First 1
+          
+          if ($null -eq $binary) {
+            Write-Host "ERROR: opencode.exe not found in packages/opencode/dist"
+            Write-Host "Searching for any .exe files:"
+            Get-ChildItem -Path packages/opencode/dist -Filter *.exe -File -Recurse | Format-Table Name, FullName
+            exit 1
+          }
+          
+          Write-Host "Found binary at: $($binary.FullName)"
           Copy-Item $binary.FullName opencode.exe
 
       - name: Upload Windows binary to existing release
@@ -316,5 +335,193 @@ jobs:
         with:
           tag_name: ${{ needs.build.outputs.tag }}
           files: opencode.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-desktop-linux:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/desktop/src-tauri
+          shared-key: x86_64-unknown-linux-gnu
+
+      - name: Build full project
+        run: bun install
+
+      - name: Download CLI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: opencode-cli
+          path: packages/opencode/dist
+        continue-on-error: true
+
+      - name: Prepare desktop build
+        run: |
+          cd packages/desktop
+          bun ./scripts/prepare.ts
+        env:
+          OPENCODE_VERSION: ${{ needs.build.outputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUST_TARGET: x86_64-unknown-linux-gnu
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+
+      - name: Install tauri-cli from portable appimage branch
+        run: |
+          cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/truly-portable-appimage --force
+          echo "Installed tauri-cli version:"
+          cargo tauri --version
+
+      - name: Build desktop
+        run: |
+          cd packages/desktop
+          cargo tauri build --target x86_64-unknown-linux-gnu --config ./src-tauri/tauri.conf.json --verbose
+        env:
+          TAURI_BUNDLER_NEW_APPIMAGE_FORMAT: true
+
+      - name: List build artifacts
+        run: |
+          echo "Listing build artifacts:"
+          find packages/desktop/src-tauri/target -name "*.AppImage" -o -name "*.deb"
+
+      - name: Prepare release artifacts
+        run: |
+          mkdir -p desktop-release
+          find packages/desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle -name "*.AppImage" -exec cp {} desktop-release/opencode-desktop-linux-x64.AppImage \;
+          find packages/desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle -name "*.deb" -exec cp {} desktop-release/opencode-desktop-linux-x64.deb \;
+          ls -la desktop-release/
+
+      - name: Upload desktop binaries to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          files: desktop-release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-desktop-windows:
+    runs-on: windows-latest
+    needs: build
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/desktop/src-tauri
+          shared-key: x86_64-pc-windows-msvc
+
+      - name: Build full project
+        run: bun install
+
+      - name: Download CLI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: opencode-cli
+          path: packages/opencode/dist
+        continue-on-error: true
+
+      - name: Prepare desktop build
+        shell: pwsh
+        run: |
+          cd packages/desktop
+          bun ./scripts/prepare.ts
+        env:
+          OPENCODE_VERSION: ${{ needs.build.outputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUST_TARGET: x86_64-pc-windows-msvc
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+
+      - name: Build desktop
+        shell: pwsh
+        run: |
+          cd packages/desktop
+          bun tauri build --target x86_64-pc-windows-msvc --config ./src-tauri/tauri.conf.json --verbose
+
+      - name: List build artifacts
+        shell: pwsh
+        run: |
+          Write-Host "Listing build artifacts:"
+          Get-ChildItem -Path packages/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle -Recurse -Include *.exe,*.msi
+
+      - name: Prepare release artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path desktop-release
+          
+          # Find NSIS installer
+          $nsisPath = "packages/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis"
+          if (Test-Path $nsisPath) {
+            $nsis = Get-ChildItem -Path $nsisPath -Filter "*.exe" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($nsis) {
+              Copy-Item $nsis.FullName desktop-release/opencode-desktop-windows-x64.exe
+              Write-Host "Copied NSIS installer: $($nsis.Name)"
+            }
+          }
+          
+          # Find MSI installer (optional)
+          $msiPath = "packages/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi"
+          if (Test-Path $msiPath) {
+            $msi = Get-ChildItem -Path $msiPath -Filter "*.msi" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($msi) {
+              Copy-Item $msi.FullName desktop-release/opencode-desktop-windows-x64.msi
+              Write-Host "Copied MSI installer: $($msi.Name)"
+            }
+          }
+          
+          Write-Host "Release artifacts:"
+          Get-ChildItem desktop-release
+          
+          # Verify at least one artifact exists
+          $count = (Get-ChildItem desktop-release).Count
+          if ($count -eq 0) {
+            Write-Host "ERROR: No desktop artifacts were created"
+            exit 1
+          }
+
+      - name: Upload desktop binaries to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          files: desktop-release/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
