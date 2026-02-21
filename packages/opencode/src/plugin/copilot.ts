@@ -1,5 +1,6 @@
 import type { Hooks, PluginInput } from "@opencode-ai/plugin"
 import { Installation } from "@/installation"
+import { Session } from "../session"
 import { iife } from "@/util/iife"
 
 const CLIENT_ID = "Ov23li8tweQw6odWQebz"
@@ -18,7 +19,6 @@ function getUrls(domain: string) {
 }
 
 export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
-  const sdk = input.client
   return {
     auth: {
       provider: "github-copilot",
@@ -308,18 +308,11 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
         output.headers["anthropic-beta"] = "interleaved-thinking-2025-05-14"
       }
 
-      const session = await sdk.session
-        .get({
-          path: {
-            id: incoming.sessionID,
-          },
-          query: {
-            directory: input.directory,
-          },
-          throwOnError: true,
-        })
-        .catch(() => undefined)
-      if (!session || !session.data.parentID) return
+      // Direct Session access avoids SDK HTTP client round-trip which can
+      // silently fail in Desktop (Tauri) context, causing subagent sessions
+      // to miss the x-initiator: agent header and consume Copilot quota.
+      const session = await Session.get(incoming.sessionID).catch(() => undefined)
+      if (!session || !session.parentID) return
       // mark subagent sessions as agent initiated matching standard that other copilot tools have
       output.headers["x-initiator"] = "agent"
     },
