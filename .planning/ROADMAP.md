@@ -26,14 +26,14 @@ Fix the desktop subagent Copilot quota bug. CLI subagents correctly avoid consum
 2. Running the same subagent prompt in CLI and Desktop produces equivalent API request headers (auth, model routing, agent markers) — the fetch interceptor in `copilot.ts` applies identically in both contexts
 3. The root cause is documented in a code comment or commit message explaining WHY desktop behaved differently from CLI
 4. Regular (non-subagent) Copilot requests in desktop continue working correctly — no regression
-   **Plans**: TBD
+   **Plans:** 1 plan
 
 Plans:
 
-- [ ] 01-01: Investigate divergence and implement fix
+- [ ] 01-01-PLAN.md — Investigate x-initiator header flow and fix subagent quota bug
 
 ## Progress
 
-| Phase                            | Plans Complete | Status      | Completed |
-| -------------------------------- | -------------- | ----------- | --------- |
-| 1. Fix Desktop Copilot Quota Bug | 0/TBD          | Not started | -         |
+| Phase                            | Plans Complete | Status   | Completed |
+| -------------------------------- | -------------- | -------- | --------- |
+| 1. Fix Desktop Copilot Quota Bug | 0/1            | Planning | -         |
