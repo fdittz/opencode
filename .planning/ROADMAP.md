@@ -11,7 +11,7 @@ Fix the desktop subagent Copilot quota bug. CLI subagents correctly avoid consum
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Fix Desktop Copilot Quota Bug** - Investigate and fix subagents consuming Copilot quota in Desktop but not CLI
+- [x] **Phase 1: Fix Desktop Copilot Quota Bug** - Investigate and fix subagents consuming Copilot quota in Desktop but not CLI ✓
 
 ## Phase Details
 
@@ -30,10 +30,10 @@ Fix the desktop subagent Copilot quota bug. CLI subagents correctly avoid consum
 
 Plans:
 
-- [ ] 01-01-PLAN.md — Investigate x-initiator header flow and fix subagent quota bug
+- [x] 01-01-PLAN.md — Investigate x-initiator header flow and fix subagent quota bug ✓
 
 ## Progress
 
-| Phase                            | Plans Complete | Status   | Completed |
-| -------------------------------- | -------------- | -------- | --------- |
-| 1. Fix Desktop Copilot Quota Bug | 0/1            | Planning | -         |
+| Phase                            | Plans Complete | Status   | Completed  |
+| -------------------------------- | -------------- | -------- | ---------- |
+| 1. Fix Desktop Copilot Quota Bug | 1/1            | Complete | 2026-02-21 |

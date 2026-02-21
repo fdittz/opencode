@@ -7,8 +7,8 @@
 
 ### Bug Fix — Desktop Copilot Quota
 
-- [ ] **BUG-01**: Investigar e documentar a diferença no path de chamada de API entre CLI e Desktop para subagentes
-- [ ] **BUG-02**: Subagentes na versão desktop não consomem cota do GitHub Copilot (comportamento idêntico à CLI)
+- [x] **BUG-01**: Investigar e documentar a diferença no path de chamada de API entre CLI e Desktop para subagentes ✓
+- [x] **BUG-02**: Subagentes na versão desktop não consomem cota do GitHub Copilot (comportamento idêntico à CLI) ✓
 
 ## v2 Requirements
 
@@ -41,10 +41,10 @@
 
 ## Traceability
 
-| Requirement | Phase   | Status  |
-| ----------- | ------- | ------- |
-| BUG-01      | Phase 1 | Pending |
-| BUG-02      | Phase 1 | Pending |
+| Requirement | Phase   | Status   |
+| ----------- | ------- | -------- |
+| BUG-01      | Phase 1 | Complete |
+| BUG-02      | Phase 1 | Complete |
 
 **Coverage:**
 
@@ -55,4 +55,4 @@
 ---
 
 _Requirements defined: 2026-02-21_
-_Last updated: 2026-02-21 after roadmap creation_
+_Last updated: 2026-02-21 after Phase 1 completion_
