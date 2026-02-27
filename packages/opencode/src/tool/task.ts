@@ -61,22 +61,31 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       const agent = await Agent.get(params.subagent_type)
       if (!agent) throw new Error(`Unknown agent type: ${params.subagent_type} is not a valid agent type`)
 
+      const permission: PermissionNext.Ruleset = [
+        ...(config.experimental?.primary_tools?.map((t) => ({
+          pattern: "*",
+          action: "allow" as const,
+          permission: t,
+        })) ?? []),
+      ]
+
       const session = await iife(async () => {
         if (params.task_id) {
           const found = await Session.get(params.task_id).catch(() => {})
-          if (found) return found
+          if (found) {
+            // clear legacy session permissions that may contain stale deny rules
+            if (found.permission?.length) {
+              await Session.setPermission({ sessionID: found.id, permission })
+              found.permission = permission
+            }
+            return found
+          }
         }
 
         return await Session.create({
           parentID: ctx.sessionID,
           title: params.description + ` (@${agent.name} subagent)`,
-          permission: [
-            ...(config.experimental?.primary_tools?.map((t) => ({
-              pattern: "*",
-              action: "allow" as const,
-              permission: t,
-            })) ?? []),
-          ],
+          permission,
         })
       })
       const msg = await MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID })
